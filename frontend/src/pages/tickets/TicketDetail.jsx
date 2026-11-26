@@ -11,7 +11,6 @@ import {
     useConfirm,
 } from "../../shared/components";
 import { encuestaEvaluarPath, ROUTES } from "../../routes/routePaths";
-import { ticketsRepository } from "../../repositories/tickets.repository.js";
 import { agregarEntrada, obtenerAtencion } from "../../services/atencion.service.js";
 import {
     cancelarTicket,
@@ -46,15 +45,7 @@ export const TicketDetail = () => {
         let activo = true;
         Promise.resolve().then(() => {
             if (!usuario) throw new Error('Inicia sesión con una cuenta activa para consultar este ticket.');
-
-            const ticketPropio = ticketsRepository.findOne(
-                (ticket) =>
-                    (ticket.id === id || ticket.codigo === id) &&
-                    ticket.usuarioId === usuario.id,
-            );
-            if (!ticketPropio) throw new Error('El ticket no existe o no pertenece a tu cuenta.');
-
-            return obtenerAtencion(ticketPropio.codigo, usuario.id);
+            return obtenerAtencion(id, usuario.id);
         }).then(
             (atencion) => {
                 if (activo) {

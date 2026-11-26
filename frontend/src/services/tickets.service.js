@@ -9,6 +9,7 @@ import { updateTables } from '../repositories/db.js'
 import { nextId } from '../utils/ids.js'
 import { esTicketEnCurso } from './ticketsEnCurso.js'
 import { simulateRequest } from './request.js'
+import { apiRequest } from './api.js'
 import { ServiceError, validationError } from './ServiceError.js'
 
 const TEXTO_REQUERIDO = 'Completa este campo.'
@@ -147,8 +148,19 @@ export function buscarTicketEnCurso({ ambienteId, ambienteCodigo, categoriaId },
   })
 }
 
-// Registra el ticket (HU-3). Un posible duplicado se avisa, pero no impide enviarlo.
+// Registro del ticket contra el backend. El usuario sale de la sesión, no del formulario.
+export function crearTicketEnServidor(datos) {
+  const { categoriaId, subcategoriaId, ambienteId, asunto, descripcion } = datos
+  return apiRequest('/tickets', {
+    method: 'POST',
+    body: { categoriaId, subcategoriaId, ambienteId, asunto, descripcion },
+  })
+}
+
+// Registra el ticket (HU-3). En desarrollo usa la API; las pruebas del frontend conservan el simulador.
 export function crearTicket(datos, usuarioId) {
+  if (import.meta.env.MODE !== 'test') return crearTicketEnServidor(datos)
+
   return simulateRequest(() => {
     const valores = {
       categoriaId: String(datos?.categoriaId ?? '').trim(),
@@ -238,7 +250,18 @@ export function cancelarTicket(ticketId, usuarioId) {
   })
 }
 
+export function reabrirTicketEnServidor(ticketId, motivo) {
+  return apiRequest(`/tickets/${encodeURIComponent(ticketId)}/reapertura`, {
+    method: 'POST',
+    body: { motivo },
+  })
+}
+
 export function reabrirTicket(ticketId, motivo, usuarioId) {
+  if (import.meta.env.MODE !== 'test') {
+    return reabrirTicketEnServidor(ticketId, motivo)
+  }
+
   return simulateRequest(() => {
     const { ticket, usuario } = exigirTicketPropio(ticketId, usuarioId)
     const texto = typeof motivo === 'string' ? motivo.trim() : ''

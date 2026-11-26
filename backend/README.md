@@ -74,4 +74,19 @@ Las rutas con sesión piden el encabezado `Authorization: Bearer <token>`. Los e
 | PUT    | /api/cuenta/contrasena                     | Cualquiera | p10    |
 | POST   | /api/solicitudes-acceso                    | Cualquiera | p11    |
 
-Las tablas `categorias`, `ambientes` (HU-2), `tickets` (HU-3) y `encuestas` (HU-6) tienen por ahora solo las columnas que lee HU-1; cada responsable completa las suyas.
+Las tablas `categorias`, `ambientes` (HU-2), `tickets` (HU-3) y `encuestas` (HU-6) comparten las columnas acordadas entre historias; cada responsable completa las de su historia.
+
+## HU-3 Registro de tickets
+
+| Método | Ruta                                      | Sesión | Mockup |
+| ------ | ----------------------------------------- | ------ | ------ |
+| POST   | /api/tickets                              | Usuario | p19   |
+| GET    | /api/tickets/:referencia                  | Usuario | p21   |
+| POST   | /api/tickets/:referencia/informacion      | Usuario | p21   |
+| POST   | /api/tickets/:referencia/reapertura       | Usuario | p22   |
+
+El registro recibe `categoriaId`, `subcategoriaId`, `ambienteId`, `asunto` y `descripcion`. El usuario se obtiene de la sesión; prioridad y tiempo esperado se toman de la subcategoría activa (o de la categoría si la subcategoría no los define). Un ticket duplicado no bloquea el registro: la pantalla muestra el aviso antes de enviarlo.
+
+El detalle solo permite consultar tickets propios y devuelve únicamente entradas públicas de la bitácora. Para agregar información se envía `{ "mensaje": "..." }`; el backend registra un comentario público con el autor y la fecha de la sesión/servidor.
+
+La reapertura recibe `{ "motivo": "..." }`, solo se permite al usuario que reportó el ticket cerrado dentro de los 7 días posteriores al cierre, y registra el motivo en el historial al devolverlo a la cola sin asignación.

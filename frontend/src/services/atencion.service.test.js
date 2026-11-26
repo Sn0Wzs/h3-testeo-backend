@@ -1,15 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { bitacoraRepository, historialRepository } from '../repositories/atencion.repository.js'
 import { readTable, writeTable } from '../repositories/db.js'
+import { sessionRepository } from '../repositories/session.repository.js'
 import { ticketsRepository } from '../repositories/tickets.repository.js'
 import { ATENCION_MESSAGES } from '../utils/atencionValidators.js'
 import { HORA_MS, MINUTO_MS } from '../utils/duracion.js'
 import {
   agregarEntrada,
+  agregarEntradaEnServidor,
   cambiarEstado,
   cerrarTicket,
   listarAtendidos,
   obtenerAtencion,
+  obtenerAtencionDelServidor,
   obtenerHistorial,
 } from './atencion.service.js'
 import { obtenerContadores } from './resumen.service.js'
@@ -54,6 +57,49 @@ afterEach(() => {
 })
 
 describe('atencion.service · obtenerAtencion', () => {
+  it('resuelve una referencia por id en el simulador', async () => {
+    const { ticket } = await obtenerAtencion('tck-00144', CAMILA)
+
+    expect(ticket.codigo).toBe('TCK-2026-00144')
+  })
+
+  describe('atencion.service · API de detalle', () => {
+    it('consulta el detalle por referencia usando el cliente autenticado', async () => {
+      sessionRepository.save({ usuarioId: CAMILA, iniciadaEn: AHORA, token: 'token-detalle' })
+      const detalle = { ticket: { codigo: EN_ATENCION }, bitacora: [], eventos: [] }
+      const fetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(detalle), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+      )
+      vi.stubGlobal('fetch', fetch)
+
+      await expect(obtenerAtencionDelServidor(EN_ATENCION)).resolves.toEqual(detalle)
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringMatching(new RegExp(`/tickets/${EN_ATENCION}$`)),
+        expect.objectContaining({ headers: { Authorization: 'Bearer token-detalle' } }),
+      )
+    })
+
+    it('envía información complementaria como comentario público', async () => {
+      sessionRepository.save({ usuarioId: CAMILA, iniciadaEn: AHORA, token: 'token-detalle' })
+      const detalle = { ticket: { codigo: EN_ATENCION }, bitacora: [{ mensaje: 'Sigue fallando' }] }
+      const fetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(detalle), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+      )
+      vi.stubGlobal('fetch', fetch)
+
+      await expect(agregarEntradaEnServidor(EN_ATENCION, { tipo: 'publico', mensaje: 'Sigue fallando' }))
+        .resolves.toEqual(detalle)
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringMatching(new RegExp(`/tickets/${EN_ATENCION}/informacion$`)),
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token-detalle' },
+          body: JSON.stringify({ mensaje: 'Sigue fallando' }),
+        }),
+      )
+    })
+  })
+
   it('devuelve los datos del reporte con su categoría, su ambiente y las personas', async () => {
     const { ticket } = await obtenerAtencion(EN_ATENCION, JULIO)
 

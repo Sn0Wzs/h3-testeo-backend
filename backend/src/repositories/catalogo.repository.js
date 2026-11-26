@@ -22,4 +22,30 @@ export const catalogoRepository = {
     const [filas] = await pool.query('SELECT id, codigo, nombre FROM ambientes ORDER BY codigo')
     return filas
   },
+
+  async buscarCategoriaActiva(id, db = pool) {
+    const [filas] = await db.query(
+      `SELECT id, nombre, prioridad_por_defecto AS prioridadPorDefecto,
+        tiempo_esperado_horas AS tiempoEsperadoHoras
+       FROM categorias WHERE id = ? AND activa = TRUE`,
+      [id],
+    )
+    return filas[0] ?? null
+  },
+
+  async buscarSubcategoriaActiva(id, categoriaId, db = pool) {
+    const [filas] = await db.query(
+      `SELECT id, categoria_id AS categoriaId, nombre,
+        prioridad_por_defecto AS prioridadPorDefecto,
+        tiempo_esperado_horas AS tiempoEsperadoHoras
+       FROM subcategorias WHERE id = ? AND categoria_id = ? AND activa = TRUE`,
+      [id, categoriaId],
+    )
+    return filas[0] ?? null
+  },
+
+  async buscarAmbiente(id, db = pool) {
+    const [filas] = await db.query('SELECT id, codigo, nombre FROM ambientes WHERE id = ?', [id])
+    return filas[0] ?? null
+  },
 }

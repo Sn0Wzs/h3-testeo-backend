@@ -3,6 +3,7 @@ import authRoutes from './auth.routes.js'
 import cuentaRoutes from './cuenta.routes.js'
 import invitacionesRoutes from './invitaciones.routes.js'
 import solicitudesAccesoRoutes from './solicitudesAcceso.routes.js'
+import ticketsRoutes from './tickets.routes.js'
 
 // Todas las rutas de la API; cada historia agrega aquí las suyas.
 export const rutas = Router()
@@ -12,3 +13,4 @@ rutas.use('/auth', authRoutes)
 rutas.use('/cuenta', cuentaRoutes)
 rutas.use('/invitaciones', invitacionesRoutes)
 rutas.use('/solicitudes-acceso', solicitudesAccesoRoutes)
+rutas.use('/tickets', ticketsRoutes)

@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetDb, readTable, writeTable } from '../repositories/db.js'
+import { sessionRepository } from '../repositories/session.repository.js'
 import { agregarEntrada, obtenerAtencion } from './atencion.service.js'
 import { listarCola } from './cola.service.js'
 import { ServiceError } from './ServiceError.js'
@@ -7,9 +8,11 @@ import {
   buscarTicketEnCurso,
   cancelarTicket,
   crearTicket,
+  crearTicketEnServidor,
   estaDentroDelPlazoDeReapertura,
   existeTicketEnCurso,
   reabrirTicket,
+  reabrirTicketEnServidor,
 } from './tickets.service.js'
 
 const USUARIO = 'usr-001'
@@ -58,6 +61,41 @@ describe('tickets.service · crearTicket', () => {
     await expect(crearTicket(NUEVO_TICKET, 'usr-004')).rejects.toMatchObject({
       code: 'FORBIDDEN',
     })
+  })
+})
+
+describe('tickets.service · crearTicketEnServidor', () => {
+  it('envía los datos del formulario a la API usando la sesión y devuelve el ticket creado', async () => {
+    sessionRepository.save({
+      usuarioId: USUARIO,
+      iniciadaEn: new Date().toISOString(),
+      token: 'token-de-prueba',
+    })
+    const ticket = { id: 'tck-00148', codigo: 'TCK-2026-00148', estado: 'abierto' }
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(ticket), { status: 201, headers: { 'Content-Type': 'application/json' } }),
+    )
+    vi.stubGlobal('fetch', fetch)
+
+    await expect(crearTicketEnServidor(NUEVO_TICKET)).resolves.toEqual(ticket)
+
+    expect(fetch).toHaveBeenCalledExactlyOnceWith(
+      expect.stringMatching(/\/api\/tickets$/),
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer token-de-prueba',
+        },
+        body: JSON.stringify({
+          categoriaId: NUEVO_TICKET.categoriaId,
+          subcategoriaId: NUEVO_TICKET.subcategoriaId,
+          ambienteId: NUEVO_TICKET.ambienteId,
+          asunto: NUEVO_TICKET.asunto,
+          descripcion: NUEVO_TICKET.descripcion,
+        }),
+      }),
+    )
   })
 })
 
@@ -126,6 +164,32 @@ describe('tickets.service · existeTicketEnCurso', () => {
 })
 
 describe('tickets.service · cancelación y reapertura', () => {
+  it('envía el motivo de reapertura a la API autenticada', async () => {
+    sessionRepository.save({
+      usuarioId: USUARIO,
+      iniciadaEn: new Date().toISOString(),
+      token: 'token-reapertura',
+    })
+    const detalle = { ticket: { id: 'tck-00103', estado: 'reabierto' } }
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(detalle), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    )
+    vi.stubGlobal('fetch', fetch)
+
+    await expect(reabrirTicketEnServidor('tck-00103', 'La falla volvió.')).resolves.toEqual(detalle)
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/tickets\/tck-00103\/reapertura$/),
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer token-reapertura',
+        },
+        body: JSON.stringify({ motivo: 'La falla volvió.' }),
+      }),
+    )
+  })
+
   it('cancela un ticket propio todavía no asignado y registra el cambio en el historial', async () => {
     const cancelado = await cancelarTicket('tck-00147', USUARIO)
 

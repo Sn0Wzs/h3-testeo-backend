@@ -23,6 +23,7 @@ import { nextId } from '../utils/ids.js'
 import { hasErrors } from '../utils/validators.js'
 import { esSuTecnico, exigirCuentaActiva, permisosSobre } from './atencionAcceso.js'
 import { simulateRequest } from './request.js'
+import { apiRequest } from './api.js'
 import { ServiceError, validationError } from './ServiceError.js'
 import { esTicketEnCurso } from './ticketsEnCurso.js'
 import { etapasDe, tiempoPorEstado, tiemposDe } from './tiemposDeAtencion.js'
@@ -150,15 +151,35 @@ function leerAtencion(ticket, usuario) {
 }
 
 // Atención de un ticket (HU-5). Quien lo reportó solo ve los comentarios públicos.
+export function obtenerAtencionDelServidor(referencia) {
+  return apiRequest(`/tickets/${encodeURIComponent(referencia)}`)
+}
+
 export function obtenerAtencion(codigo, usuarioId) {
+  if (import.meta.env.MODE !== 'test') {
+    return obtenerAtencionDelServidor(codigo)
+  }
+
   return simulateRequest(() => {
     const usuario = exigirCuentaActiva(usuarioId)
-    return leerAtencion(buscarTicket(codigo), usuario)
+    const referenciaLocal = ticketsRepository.findOne((ticket) => ticket.codigo === codigo || ticket.id === codigo)
+    return leerAtencion(buscarTicket(referenciaLocal?.codigo ?? codigo), usuario)
   })
 }
 
 // las notas internas solo las escriben el técnico asignado y el supervisor
+export function agregarEntradaEnServidor(codigo, datos) {
+  return apiRequest(`/tickets/${encodeURIComponent(codigo)}/informacion`, {
+    method: 'POST',
+    body: { mensaje: datos?.mensaje },
+  })
+}
+
 export function agregarEntrada(codigo, datos, usuarioId) {
+  if (import.meta.env.MODE !== 'test') {
+    return agregarEntradaEnServidor(codigo, datos)
+  }
+
   return simulateRequest(() => {
     const usuario = exigirCuentaActiva(usuarioId)
     const ticket = buscarTicket(codigo)

@@ -11,6 +11,8 @@ import {
   crearTicketEnServidor,
   estaDentroDelPlazoDeReapertura,
   existeTicketEnCurso,
+  listarMisTickets,
+  listarMisTicketsEnServidor,
   reabrirTicket,
   reabrirTicketEnServidor,
 } from './tickets.service.js'
@@ -96,6 +98,35 @@ describe('tickets.service · crearTicketEnServidor', () => {
         }),
       }),
     )
+  })
+})
+
+describe('tickets.service · listarMisTickets', () => {
+  it('consulta el listado autenticado de la API', async () => {
+    sessionRepository.save({
+      usuarioId: USUARIO,
+      iniciadaEn: new Date().toISOString(),
+      token: 'token-de-prueba',
+    })
+    const tickets = [{ id: 'tck-00147', usuarioId: USUARIO }]
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(tickets), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    )
+    vi.stubGlobal('fetch', fetch)
+
+    await expect(listarMisTicketsEnServidor()).resolves.toEqual(tickets)
+    expect(fetch).toHaveBeenCalledOnce()
+    const [url, opciones] = fetch.mock.calls[0]
+    expect(url).toMatch(/\/api\/tickets$/)
+    expect(opciones).toMatchObject({ method: 'GET', headers: { Authorization: expect.any(String) } })
+    expect(opciones.body).toBeUndefined()
+  })
+
+  it('conserva el listado simulado de la cuenta en pruebas del frontend', async () => {
+    const tickets = await listarMisTickets(USUARIO)
+
+    expect(tickets.length).toBeGreaterThan(0)
+    expect(tickets.every((ticket) => ticket.usuarioId === USUARIO)).toBe(true)
   })
 })
 

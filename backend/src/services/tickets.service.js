@@ -97,6 +97,12 @@ function exigirUsuario(usuario) {
   }
 }
 
+// Lista únicamente los tickets del usuario autenticado.
+export async function listarTicketsPropios(usuario) {
+  exigirUsuario(usuario)
+  return ticketsRepository.listarPropios(usuario.id)
+}
+
 // Devuelve solo tickets del usuario y oculta las notas internas del equipo.
 async function detallePropio(referencia, usuarioId, db) {
   const ticket = await ticketsRepository.buscarDetallePropio(referencia, usuarioId, db)

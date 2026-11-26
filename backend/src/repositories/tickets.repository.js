@@ -2,6 +2,29 @@ import { pool } from '../db/pool.js'
 
 // Consultas MySQL del registro, detalle, bitácora e historial de HU-3.
 export const ticketsRepository = {
+  async listarPropios(usuarioId, db = pool) {
+    const [filas] = await db.query(
+      `SELECT t.id, t.codigo, t.usuario_id AS usuarioId, t.categoria_id AS categoriaId,
+        t.subcategoria_id AS subcategoriaId, t.ambiente_id AS ambienteId, t.asunto, t.descripcion,
+        t.prioridad,
+        COALESCE(t.tiempo_esperado_horas, s.tiempo_esperado_horas, c.tiempo_esperado_horas) AS tiempoEsperadoHoras,
+        t.asignado_a AS asignadoA, t.estado, t.creado_en AS creadoEn, t.cerrado_en AS cerradoEn,
+        c.nombre AS categoriaNombre, s.nombre AS subcategoriaNombre,
+        a.codigo AS ambienteCodigo, a.nombre AS ambienteNombre
+       FROM tickets t
+       LEFT JOIN categorias c ON c.id = t.categoria_id
+       LEFT JOIN subcategorias s ON s.id = t.subcategoria_id
+       LEFT JOIN ambientes a ON a.id = t.ambiente_id
+       WHERE t.usuario_id = ?
+       ORDER BY t.creado_en DESC, t.id DESC`,
+      [usuarioId],
+    )
+    return filas.map((fila) => ({
+      ...fila,
+      tiempoEsperadoHoras: fila.tiempoEsperadoHoras == null ? null : Number(fila.tiempoEsperadoHoras),
+    }))
+  },
+
   async insertar(ticket, db = pool) {
     await db.query(
       `INSERT INTO tickets (

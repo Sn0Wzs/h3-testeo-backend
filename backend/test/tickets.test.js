@@ -108,6 +108,35 @@ describe('POST /api/tickets (HU-3)', () => {
   })
 })
 
+describe('GET /api/tickets (HU-3)', () => {
+  it('requiere sesión y el rol usuario', async () => {
+    expect((await api().get('/api/tickets')).status).toBe(401)
+
+    const tokenTecnico = await ingresar(JULIO)
+    expect((await api().get('/api/tickets').set(conToken(tokenTecnico))).status).toBe(403)
+  })
+
+  it('lista los tickets propios con sus datos de categoría y ambiente', async () => {
+    const respuesta = await api().get('/api/tickets').set(conToken(token))
+
+    expect(respuesta.status).toBe(200)
+    expect(respuesta.body.length).toBeGreaterThan(0)
+    expect(respuesta.body.every((ticket) => ticket.usuarioId === 'usr-001')).toBe(true)
+    expect(respuesta.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'tck-00103',
+          codigo: 'TCK-2026-00103',
+          categoriaNombre: expect.any(String),
+          subcategoriaNombre: expect.any(String),
+          ambienteCodigo: expect.any(String),
+        }),
+      ]),
+    )
+    expect(respuesta.body.some((ticket) => ticket.id === 'tck-00146')).toBe(false)
+  })
+})
+
 describe('detalle e información del ticket (HU-3)', () => {
   it('devuelve el detalle del ticket propio y oculta entradas internas', async () => {
     const respuesta = await api().get('/api/tickets/TCK-2026-00103').set(conToken(token))

@@ -5,6 +5,10 @@ export async function crear(req, res) {
   res.status(201).json(await ticketsService.crearTicket(req.usuario, req.body))
 }
 
+export async function listar(req, res) {
+  res.json(await ticketsService.listarTicketsPropios(req.usuario))
+}
+
 export async function detalle(req, res) {
   res.json(await ticketsService.obtenerDetalleTicket(req.usuario, req.params.referencia))
 }

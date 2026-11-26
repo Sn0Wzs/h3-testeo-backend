@@ -1,23 +1,26 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Alert, Button, PageHeader, PriorityBadge, SelectInput, StatusBadge, TextInput } from "../../shared/components";
 import { ROUTES, usuarioTicketDetallePath } from "../../routes/routePaths";
-import { ticketsRepository } from "../../repositories/tickets.repository.js";
 import { ambientesRepository, categoriasRepository, subcategoriasRepository } from "../../repositories/catalogo.repository.js";
 import { formatDate } from "../../utils/format.js";
 import { esTicketEnCurso } from "../../services/ticketsEnCurso.js";
+import { listarMisTickets } from "../../services/tickets.service.js";
+import { useAsyncData } from "../../hooks/useAsyncData.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import Paginacion from "../catalogo/Paginacion.jsx";
 import './MyTickets.css';
+
+const TICKETS_VACIOS = [];
 
 export const MyTickets = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { usuario } = useAuth();
 
-    const [tickets] = useState(() => {
-        return usuario?.id ? ticketsRepository.findAll({ usuarioId: usuario.id }) : [];
-    });
+    const cargar = useCallback(() => listarMisTickets(usuario.id), [usuario.id]);
+    const consulta = useAsyncData(cargar);
+    const tickets = consulta.data ?? TICKETS_VACIOS;
 
     const opcionesCategorias = [
         { value: '', label: 'Categoría: todas' },
@@ -180,6 +183,15 @@ export const MyTickets = () => {
                 </Alert>
             )}
 
+            {consulta.status === 'error' && (
+                <Alert
+                    variant="error"
+                    actions={<Button variant="secondary" onClick={consulta.reload}>Reintentar</Button>}
+                >
+                    {consulta.error?.message || 'No pudimos cargar tus tickets.'}
+                </Alert>
+            )}
+
             {/* Filtros */}
             <div className="mis-tickets__filtros">
                 <div className="mis-tickets__busqueda">
@@ -255,7 +267,11 @@ export const MyTickets = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {ticketsPaginados.length > 0 ? (
+                        {consulta.status === 'loading' ? (
+                            <tr><td colSpan="7" className="mis-tickets__vacio">Cargando tus tickets…</td></tr>
+                        ) : consulta.status === 'error' ? (
+                            <tr><td colSpan="7" className="mis-tickets__vacio">No se pudieron cargar tus tickets.</td></tr>
+                        ) : ticketsPaginados.length > 0 ? (
                             ticketsPaginados.map((ticket) => (
                                 <tr key={ticket.id || ticket.codigo}>
                                     <td>

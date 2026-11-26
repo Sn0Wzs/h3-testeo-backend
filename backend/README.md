@@ -81,11 +81,14 @@ Las tablas `categorias`, `ambientes` (HU-2), `tickets` (HU-3) y `encuestas` (HU-
 | Método | Ruta                                      | Sesión | Mockup |
 | ------ | ----------------------------------------- | ------ | ------ |
 | POST   | /api/tickets                              | Usuario | p19   |
+| GET    | /api/tickets                              | Usuario | Mis tickets |
 | GET    | /api/tickets/:referencia                  | Usuario | p21   |
 | POST   | /api/tickets/:referencia/informacion      | Usuario | p21   |
 | POST   | /api/tickets/:referencia/reapertura       | Usuario | p22   |
 
 El registro recibe `categoriaId`, `subcategoriaId`, `ambienteId`, `asunto` y `descripcion`. El usuario se obtiene de la sesión; prioridad y tiempo esperado se toman de la subcategoría activa (o de la categoría si la subcategoría no los define). Un ticket duplicado no bloquea el registro: la pantalla muestra el aviso antes de enviarlo.
+
+El listado devuelve únicamente los tickets del usuario autenticado, ordenados del más reciente al más antiguo.
 
 El detalle solo permite consultar tickets propios y devuelve únicamente entradas públicas de la bitácora. Para agregar información se envía `{ "mensaje": "..." }`; el backend registra un comentario público con el autor y la fecha de la sesión/servidor.
 

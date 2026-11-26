@@ -157,6 +157,15 @@ export function crearTicketEnServidor(datos) {
   })
 }
 
+export function listarMisTicketsEnServidor() {
+  return apiRequest('/tickets')
+}
+
+export function listarMisTickets(usuarioId) {
+  if (import.meta.env.MODE !== 'test') return listarMisTicketsEnServidor()
+  return simulateRequest(() => ticketsRepository.findAll({ usuarioId }))
+}
+
 // Registra el ticket (HU-3). En desarrollo usa la API; las pruebas del frontend conservan el simulador.
 export function crearTicket(datos, usuarioId) {
   if (import.meta.env.MODE !== 'test') return crearTicketEnServidor(datos)
